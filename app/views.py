@@ -6,11 +6,11 @@ This file creates your application.
 """
 import os
 from app import app
-from flask_wtf.csrf import CSRFProtect
-from flask import render_template, request, redirect, url_for, flash, session, abort
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
 from werkzeug.utils import secure_filename
 from app.forms import UploadForm
-csrf = CSRFProtect(app)
+import os
+
 
 ###
 # Routing for your application.
@@ -30,8 +30,8 @@ def about():
 
 @app.route('/upload', methods=['POST', 'GET'])
 def upload():
-    #if not session.get('logged_in'):
-        #abort(401)
+    if not session.get('logged_in'):
+        abort(401)
 
     # Instantiate your form class
     form = UploadForm()
@@ -44,12 +44,33 @@ def upload():
             photo = form.photo.data
             filename = secure_filename(photo.filename)
             photo.save(os.path.join(app.config["UPLOAD_FOLDER"],filename))
-
-        flash('File Saved', 'success')
+            flash('File Saved', 'success')
+        else:
+            flash('File Not Saved. Wrong file type', 'Error') 
         return redirect(url_for('home'))
 
     return render_template('upload.html',form=form)
 
+def get_uploaded_images():
+    
+    photoList = [] #Photos will be stored here
+    
+    for subdir, dirs, files in os.walk(os.path.join(app.config["UPLOAD_FOLDER"])):
+        for file in files:
+            photoList.append(file)
+    return photoList
+
+@app.route("/uploads/<filename>")
+def getImage(filename):
+    root = os.getcwd()
+    return send_from_directory(os.path.join(root,app.config["UPLOAD_FOLDER"]),filename)
+
+@app.route("/files")
+def files():
+    #if not session.get('logged_in'):
+        #abort(401)
+    photos = get_uploaded_images()
+    return render_template("files.html",photos=photos)
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
