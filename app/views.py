@@ -6,9 +6,11 @@ This file creates your application.
 """
 import os
 from app import app
+from flask_wtf.csrf import CSRFProtect
 from flask import render_template, request, redirect, url_for, flash, session, abort
 from werkzeug.utils import secure_filename
-
+from app.forms import UploadForm
+csrf = CSRFProtect(app)
 
 ###
 # Routing for your application.
@@ -28,19 +30,25 @@ def about():
 
 @app.route('/upload', methods=['POST', 'GET'])
 def upload():
-    if not session.get('logged_in'):
-        abort(401)
+    #if not session.get('logged_in'):
+        #abort(401)
 
     # Instantiate your form class
+    form = UploadForm()
 
     # Validate file upload on submit
     if request.method == 'POST':
-        # Get file data and save to your uploads folder
+        
+        if form.validate_on_submit(): # Validate file upload on submit
+            # Get file data and save to your uploads folder
+            photo = form.photo.data
+            filename = secure_filename(photo.filename)
+            photo.save(os.path.join(app.config["UPLOAD_FOLDER"],filename))
 
         flash('File Saved', 'success')
         return redirect(url_for('home'))
 
-    return render_template('upload.html')
+    return render_template('upload.html',form=form)
 
 
 @app.route('/login', methods=['POST', 'GET'])
